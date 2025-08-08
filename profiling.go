@@ -54,6 +54,12 @@ func (info *ProfilingInfo) getMetrics(profilingInfo mapping.ProfilingInfo) {
 	}
 	mapping.DestroyValue(&metricsMap)
 
+	// Extra info is not currently in the metric map
+	extraInfo := mapping.ProfilingInfoGetValue(profilingInfo, "EXTRA_INFO")
+	extraInfoStr := mapping.GetVarchar(extraInfo)
+	info.Metrics["EXTRA_INFO"] = extraInfoStr
+	mapping.DestroyValue(&extraInfo)
+
 	childCount := mapping.ProfilingInfoGetChildCount(profilingInfo)
 	for i := range uint64(childCount) {
 		profilingInfoChild := mapping.ProfilingInfoGetChild(profilingInfo, mapping.IdxT(i))
