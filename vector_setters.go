@@ -217,10 +217,16 @@ func setBignum[S any](vec *vector, rowIdx mapping.IdxT, val S) error {
 	return nil
 }
 
+// setBytes hands the value's bytes to DuckDB, which copies them into the
+// vector's own string heap before returning: duckdb_vector_assign_string_element_len
+// ends in StringVector::AddStringOrBlob -> StringHeap::AddBlob, which either
+// memcpys into the inlined 12 bytes of the string_t or memcpys into the vector's
+// arena. Neither branch retains the caller's pointer, so a Go-side copy before
+// the call buys nothing and costs an allocation per value.
 func setBytes[S any](vec *vector, rowIdx mapping.IdxT, val S) error {
 	switch v := any(val).(type) {
 	case string:
-		mapping.VectorAssignStringElementLen(vec.vec, rowIdx, []byte(v))
+		mapping.VectorAssignStringElement(vec.vec, rowIdx, v)
 	case []byte:
 		mapping.VectorAssignStringElementLen(vec.vec, rowIdx, v)
 	default:

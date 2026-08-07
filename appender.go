@@ -24,6 +24,10 @@ type Appender struct {
 	types []mapping.LogicalType
 	// The number of appended rows.
 	rowCount int
+	// chunkCap is GetDataChunkCapacity, cached. It is a constant of the loaded
+	// library, but reading it is a cgo call, and the append path asks once per
+	// row.
+	chunkCap int
 }
 
 // NewAppenderFromConn returns a new Appender for the default catalog.
@@ -407,6 +411,7 @@ func (a *Appender) initAppenderChunk() (*Appender, error) {
 		mapping.AppenderDestroy(&a.appender)
 		return nil, getError(errAppenderCreation, err)
 	}
+	a.chunkCap = GetDataChunkCapacity()
 
 	return a, nil
 }
@@ -418,7 +423,7 @@ func (a *Appender) appendRowSlice(args []driver.Value) error {
 	}
 
 	// Create a new data chunk if the current chunk is full.
-	if a.rowCount == GetDataChunkCapacity() {
+	if a.rowCount == a.chunkCap {
 		if err := a.appendDataChunk(); err != nil {
 			return err
 		}
